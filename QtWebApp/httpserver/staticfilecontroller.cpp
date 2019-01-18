@@ -10,7 +10,7 @@
 
 using namespace stefanfrings;
 
-StaticFileController::StaticFileController(QSettings* settings, QObject* parent)
+StaticFileController::StaticFileController(const QSettings *settings, QObject* parent)
     :HttpRequestHandler(parent)
 {
     maxAge=settings->value("maxAge","60000").toInt();
@@ -37,7 +37,7 @@ StaticFileController::StaticFileController(QSettings* settings, QObject* parent)
 }
 
 
-void StaticFileController::service(HttpRequest& request, HttpResponse& response)
+void StaticFileController::service(HttpRequest &request, HttpResponse &response)
 {
     QByteArray path=request.getPath();
     // Check if we have the file in cache
@@ -121,7 +121,7 @@ void StaticFileController::service(HttpRequest& request, HttpResponse& response)
     }
 }
 
-void StaticFileController::setContentType(QString fileName, HttpResponse& response) const
+void StaticFileController::setContentType(const QString fileName, HttpResponse &response) const
 {
     if (fileName.endsWith(".png"))
     {

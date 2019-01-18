@@ -109,30 +109,6 @@ int main(int argc, char *argv[])
     new HttpListener(listenerSettings,new RequestMapper(&app),&app);
 
     qWarning("Application has started");
-
-    qDebug("create session1");
-    HttpSession session1(true);
-    session1.set("name","foo1");
-
-    qDebug("create session2");
-    HttpSession session2(true);
-    session2.set("name","foo2");
-
-    qDebug("create session3");
-    HttpSession session3(true);
-    session3.set("name","foo3");
-
-    qDebug("copy session 1 to session 3");
-    session3=session1;
-
-    qDebug("copy session 2 to session 3");
-    session3=session2;
-
-    qDebug("copy session 3 to session 3");
-    session3=session3;
-    qDebug("name in session3 %s is %s",session3.getId().constData(),session3.get("name").toByteArray().data());
-
-    // app.exec();
-
+    app.exec();
     qWarning("Application has stopped");
 }

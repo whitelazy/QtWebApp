@@ -58,7 +58,8 @@ public:
       @param requestHandler Handler that will process each incoming HTTP request
       @param sslConfiguration SSL (HTTPS) will be used if not NULL
     */
-    HttpConnectionHandler(QSettings* settings, HttpRequestHandler* requestHandler, QSslConfiguration* sslConfiguration=NULL);
+    HttpConnectionHandler(const QSettings* settings, HttpRequestHandler* requestHandler,
+                          const QSslConfiguration* sslConfiguration=nullptr);
 
     /** Destructor */
     virtual ~HttpConnectionHandler();
@@ -72,7 +73,7 @@ public:
 private:
 
     /** Configuration settings */
-    QSettings* settings;
+    const QSettings* settings;
 
     /** TCP socket of the current connection  */
     QTcpSocket* socket;
@@ -90,7 +91,7 @@ private:
     bool busy;
 
     /** Configuration for SSL */
-    QSslConfiguration* sslConfiguration;
+    const QSslConfiguration* sslConfiguration;
 
     /** Executes the threads own event loop */
     void run();
@@ -104,7 +105,7 @@ public slots:
       Received from from the listener, when the handler shall start processing a new connection.
       @param socketDescriptor references the accepted connection.
     */
-    void handleConnection(tSocketDescriptor socketDescriptor);
+    void handleConnection(const tSocketDescriptor socketDescriptor);
 
 private slots:
 

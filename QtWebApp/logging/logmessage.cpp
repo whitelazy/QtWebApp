@@ -8,7 +8,7 @@
 
 using namespace stefanfrings;
 
-LogMessage::LogMessage(const QtMsgType type, const QString& message, QHash<QString, QString>* logVars, const QString &file, const QString &function, const int line)
+LogMessage::LogMessage(const QtMsgType type, const QString& message, const QHash<QString, QString> *logVars, const QString &file, const QString &function, const int line)
 {
     this->type=type;
     this->message=message;

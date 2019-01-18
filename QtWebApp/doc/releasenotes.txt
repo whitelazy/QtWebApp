@@ -1,10 +1,15 @@
 Dont forget to update the release number also in
 QtWebApp.pro and httpserver/httpglobal.cpp.
 
+1.7.6
+18.01.2019
+Code cleanup with const keywords and type conversions.
+Update Documentation.
+
 1.7.5
 17.01.2019
 Added content-types for *.xml and *.json to the StaticFileController.
-Fixed locking and memory leak in HttpSession
+Fixed locking and memory leak in HttpSession.
 
 1.7.4
 24.05.2018

@@ -7,7 +7,7 @@
 
 using namespace stefanfrings;
 
-HttpResponse::HttpResponse(QTcpSocket* socket)
+HttpResponse::HttpResponse(QTcpSocket *socket)
 {
     this->socket=socket;
     statusCode=200;
@@ -84,7 +84,7 @@ bool HttpResponse::writeToSocket(QByteArray data)
             socket->waitForBytesWritten(-1);
         }
 
-        int written=socket->write(ptr,remaining);
+        qint64 written=socket->write(ptr,remaining);
         if (written==-1)
         {
           return false;
