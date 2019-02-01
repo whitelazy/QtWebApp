@@ -40,13 +40,15 @@ void HttpRequest::readRequest(QTcpSocket* socket)
     lineBuffer.clear();
     if (!newData.isEmpty())
     {
+        qDebug("HttpRequest: from %s: %s",qPrintable(socket->peerAddress().toString()),newData.data());
         QList<QByteArray> list=newData.split(' ');
         if (list.count()!=3 || !list.at(2).contains("HTTP"))
         {
             qWarning("HttpRequest: received broken HTTP request, invalid first line");
             status=abort;
         }
-        else {
+        else
+        {
             method=list.at(0).trimmed();
             path=list.at(1);
             version=list.at(2);
