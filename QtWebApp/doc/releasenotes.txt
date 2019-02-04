@@ -4,6 +4,7 @@ QtWebApp.pro and httpserver/httpglobal.cpp.
 1.7.7
 04.02.2019
 HttpConnectionHandler creates a new Qthread instead of being itself a QThread.
+Improved formatting of thread ID in logger.
 
 1.7.6
 18.01.2019

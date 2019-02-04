@@ -59,8 +59,6 @@ QString LogMessage::toString(const QString& msgFormat, const QString& timestampF
             decorated.replace("{type}","INFO    ");
             break;
     #endif
-        default:
-            decorated.replace("{type}",typeNr);
     }
 
     decorated.replace("{file}",file);
@@ -68,7 +66,8 @@ QString LogMessage::toString(const QString& msgFormat, const QString& timestampF
     decorated.replace("{line}",QString::number(line));
 
     QString threadId;
-    threadId.setNum((unsigned long)QThread::currentThreadId());
+    threadId.sprintf("%p", QThread::currentThreadId());
+    //threadId.setNum((uintptr_t)QThread::currentThreadId());
     decorated.replace("{thread}",threadId);
 
     // Fill in variables
