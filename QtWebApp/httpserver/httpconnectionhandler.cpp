@@ -9,7 +9,7 @@
 using namespace stefanfrings;
 
 HttpConnectionHandler::HttpConnectionHandler(const QSettings *settings, HttpRequestHandler *requestHandler, const QSslConfiguration* sslConfiguration)
-    : QThread()
+    : QObject()
 {
     Q_ASSERT(settings!=nullptr);
     Q_ASSERT(requestHandler!=nullptr);
@@ -19,13 +19,15 @@ HttpConnectionHandler::HttpConnectionHandler(const QSettings *settings, HttpRequ
     currentRequest=nullptr;
     busy=false;
 
+    // execute signals in a new thread
+    thread = new QThread();
+    thread->start();
+    moveToThread(thread);
+    readTimer.moveToThread(thread);
+
     // Create TCP or SSL socket
     createSocket();
-
-    // execute signals in my own thread
-    moveToThread(this);
-    socket->moveToThread(this);
-    readTimer.moveToThread(this);
+    socket->moveToThread(thread);
 
     // Connect signals
     connect(socket, SIGNAL(readyRead()), SLOT(read()));
@@ -33,15 +35,18 @@ HttpConnectionHandler::HttpConnectionHandler(const QSettings *settings, HttpRequ
     connect(&readTimer, SIGNAL(timeout()), SLOT(readTimeout()));
     readTimer.setSingleShot(true);
 
-    qDebug("HttpConnectionHandler (%p): constructed", static_cast<void*>(this));
-    this->start();
+    qDebug("HttpConnectionHandler (%p): constructed", static_cast<void*>(this));    
 }
 
 
 HttpConnectionHandler::~HttpConnectionHandler()
 {
-    quit();
-    wait();
+    socket->close();
+    delete socket;
+    readTimer.stop();
+    thread->quit();
+    thread->wait();
+    thread->deleteLater();
     qDebug("HttpConnectionHandler (%p): destroyed", static_cast<void*>(this));
 }
 
@@ -61,24 +66,6 @@ void HttpConnectionHandler::createSocket()
     #endif
     // else create an instance of QTcpSocket
     socket=new QTcpSocket();
-}
-
-
-void HttpConnectionHandler::run()
-{
-    qDebug("HttpConnectionHandler (%p): thread started", static_cast<void*>(this));
-    try
-    {
-        exec();
-    }
-    catch (...)
-    {
-        qCritical("HttpConnectionHandler (%p): an uncatched exception occured in the thread",static_cast<void*>(this));
-    }
-    socket->close();
-    delete socket;
-    readTimer.stop();
-    qDebug("HttpConnectionHandler (%p): thread stopped", static_cast<void*>(this));
 }
 
 

@@ -1,6 +1,10 @@
 Dont forget to update the release number also in
 QtWebApp.pro and httpserver/httpglobal.cpp.
 
+1.7.7
+04.02.2019
+HttpConnectionHandler creates a new Qthread instead of being itself a QThread.
+
 1.7.6
 18.01.2019
 Code cleanup with const keywords and type conversions.

@@ -46,7 +46,7 @@ namespace stefanfrings {
   The readTimeout value defines the maximum time to wait for a complete HTTP request.
   @see HttpRequest for description of config settings maxRequestSize and maxMultiPartSize.
 */
-class DECLSPEC HttpConnectionHandler : public QThread {
+class DECLSPEC HttpConnectionHandler : public QObject {
     Q_OBJECT
     Q_DISABLE_COPY(HttpConnectionHandler)
 
@@ -78,6 +78,9 @@ private:
     /** TCP socket of the current connection  */
     QTcpSocket* socket;
 
+    /** The thread that processes events of this connection */
+    QThread* thread;
+
     /** Time for read timeout detection */
     QTimer readTimer;
 
@@ -92,9 +95,6 @@ private:
 
     /** Configuration for SSL */
     const QSslConfiguration* sslConfiguration;
-
-    /** Executes the threads own event loop */
-    void run();
 
     /**  Create SSL or TCP socket */
     void createSocket();
@@ -117,7 +117,6 @@ private slots:
 
     /** Received from the socket when a connection has been closed */
     void disconnected();
-
 };
 
 } // end of namespace
