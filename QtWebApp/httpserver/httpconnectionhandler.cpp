@@ -22,28 +22,36 @@ HttpConnectionHandler::HttpConnectionHandler(const QSettings *settings, HttpRequ
     // execute signals in a new thread
     thread = new QThread();
     thread->start();
+    qDebug("HttpConnectionHandler (%p): thread started", static_cast<void*>(this));
     moveToThread(thread);
     readTimer.moveToThread(thread);
+    readTimer.setSingleShot(true);
 
     // Create TCP or SSL socket
-    createSocket();
+    createSocket();    
     socket->moveToThread(thread);
 
     // Connect signals
     connect(socket, SIGNAL(readyRead()), SLOT(read()));
     connect(socket, SIGNAL(disconnected()), SLOT(disconnected()));
     connect(&readTimer, SIGNAL(timeout()), SLOT(readTimeout()));
-    readTimer.setSingleShot(true);
+    connect(thread, SIGNAL(finished()), this, SLOT(thread_done()));
 
     qDebug("HttpConnectionHandler (%p): constructed", static_cast<void*>(this));    
 }
 
 
-HttpConnectionHandler::~HttpConnectionHandler()
+void HttpConnectionHandler::thread_done()
 {
+    readTimer.stop();
     socket->close();
     delete socket;
-    readTimer.stop();
+    qDebug("HttpConnectionHandler (%p): thread stopped", static_cast<void*>(this));
+}
+
+
+HttpConnectionHandler::~HttpConnectionHandler()
+{
     thread->quit();
     thread->wait();
     thread->deleteLater();

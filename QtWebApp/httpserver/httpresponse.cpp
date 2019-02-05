@@ -69,6 +69,7 @@ void HttpResponse::writeHeaders()
     }
     buffer.append("\r\n");
     writeToSocket(buffer);
+    socket->flush();
     sentHeaders=true;
 }
 

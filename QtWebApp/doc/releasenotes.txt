@@ -1,6 +1,11 @@
 Dont forget to update the release number also in
 QtWebApp.pro and httpserver/httpglobal.cpp.
 
+1.7.8
+05.02.2019
+HttpConnectionHandler closes the socket now in the thread of the socket.
+Headers and Body sent to the browser are now separated into individual ethernet packets.
+
 1.7.7
 04.02.2019
 HttpConnectionHandler creates a new Qthread instead of being itself a QThread.

@@ -117,6 +117,9 @@ private slots:
 
     /** Received from the socket when a connection has been closed */
     void disconnected();
+
+    /** Cleanup after the thread is closed */
+    void thread_done();
 };
 
 } // end of namespace
