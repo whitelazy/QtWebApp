@@ -1,6 +1,11 @@
 Dont forget to update the release number also in
 QtWebApp.pro and httpserver/httpglobal.cpp.
 
+1.7.9
+20.06.2019
+INFO messages do not trigger writing out buffered log messages anymore when
+bufferSize>0 and minLevel>0.
+
 1.7.8
 05.02.2019
 HttpConnectionHandler closes the socket now in the thread of the socket.
