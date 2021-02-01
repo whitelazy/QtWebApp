@@ -4,173 +4,175 @@
 */
 
 #include "httprequest.h"
-#include <QList>
-#include <QDir>
 #include "httpcookie.h"
+#include <QDir>
+#include <QList>
 
 using namespace stefanfrings;
 
-HttpRequest::HttpRequest(const QSettings* settings)
+HttpRequest::HttpRequest(const QSettings *settings)
 {
-    status=waitForRequest;
-    currentSize=0;
-    expectedBodySize=0;
-    maxSize=settings->value("maxRequestSize","16000").toInt();
-    maxMultiPartSize=settings->value("maxMultiPartSize","1000000").toInt();
-    tempFile=nullptr;
+    status = waitForRequest;
+    currentSize = 0;
+    expectedBodySize = 0;
+    maxSize = settings->value("maxRequestSize", "16000").toInt();
+    maxMultiPartSize = settings->value("maxMultiPartSize", "1000000").toInt();
+    tempFile = nullptr;
 }
 
-
-void HttpRequest::readRequest(QTcpSocket* socket)
+void HttpRequest::readRequest(QTcpSocket *socket)
 {
-    #ifdef SUPERVERBOSE
-        qDebug("HttpRequest: read request");
-    #endif
-    int toRead=maxSize-currentSize+1; // allow one byte more to be able to detect overflow
+#ifdef SUPERVERBOSE
+    qDebug("HttpRequest: read request");
+#endif
+    int toRead = maxSize - currentSize + 1; // allow one byte more to be able to detect overflow
     QByteArray dataRead = socket->readLine(toRead);
     currentSize += dataRead.size();
     lineBuffer.append(dataRead);
     if (!lineBuffer.contains("\r\n"))
     {
-        #ifdef SUPERVERBOSE
-            qDebug("HttpRequest: collecting more parts until line break");
-        #endif
+#ifdef SUPERVERBOSE
+        qDebug("HttpRequest: collecting more parts until line break");
+#endif
         return;
     }
-    QByteArray newData=lineBuffer.trimmed();
+    QByteArray newData = lineBuffer.trimmed();
     lineBuffer.clear();
     if (!newData.isEmpty())
     {
-        qDebug("HttpRequest: from %s: %s",qPrintable(socket->peerAddress().toString()),newData.data());
-        QList<QByteArray> list=newData.split(' ');
-        if (list.count()!=3 || !list.at(2).contains("HTTP"))
+        qDebug("HttpRequest: from %s: %s", qPrintable(socket->peerAddress().toString()), newData.data());
+        QList<QByteArray> list = newData.split(' ');
+        if (list.count() != 3 || !list.at(2).contains("HTTP"))
         {
             qWarning("HttpRequest: received broken HTTP request, invalid first line");
-            status=abort;
+            status = abort;
         }
         else
         {
-            method=list.at(0).trimmed();
-            path=list.at(1);
-            version=list.at(2);
+            method = list.at(0).trimmed();
+            path = list.at(1);
+            version = list.at(2);
             peerAddress = socket->peerAddress();
-            status=waitForHeader;
+            status = waitForHeader;
         }
     }
 }
 
-void HttpRequest::readHeader(QTcpSocket* socket)
+void HttpRequest::readHeader(QTcpSocket *socket)
 {
-    int toRead=maxSize-currentSize+1; // allow one byte more to be able to detect overflow
+    int toRead = maxSize - currentSize + 1; // allow one byte more to be able to detect overflow
     QByteArray dataRead = socket->readLine(toRead);
     currentSize += dataRead.size();
     lineBuffer.append(dataRead);
     if (!lineBuffer.contains("\r\n"))
     {
-        #ifdef SUPERVERBOSE
-            qDebug("HttpRequest: collecting more parts until line break");
-        #endif
+#ifdef SUPERVERBOSE
+        qDebug("HttpRequest: collecting more parts until line break");
+#endif
         return;
     }
-    QByteArray newData=lineBuffer.trimmed();
+    QByteArray newData = lineBuffer.trimmed();
     lineBuffer.clear();
-    int colon=newData.indexOf(':');
-    if (colon>0)
+    int colon = newData.indexOf(':');
+    if (colon > 0)
     {
         // Received a line with a colon - a header
-        currentHeader=newData.left(colon).toLower();
-        QByteArray value=newData.mid(colon+1).trimmed();
-        headers.insert(currentHeader,value);
-        #ifdef SUPERVERBOSE
-            qDebug("HttpRequest: received header %s: %s",currentHeader.data(),value.data());
-        #endif
+        currentHeader = newData.left(colon).toLower();
+        QByteArray value = newData.mid(colon + 1).trimmed();
+        headers.insert(currentHeader, value);
+#ifdef SUPERVERBOSE
+        qDebug("HttpRequest: received header %s: %s", currentHeader.data(), value.data());
+#endif
     }
     else if (!newData.isEmpty())
     {
-        // received another line - belongs to the previous header
-        #ifdef SUPERVERBOSE
-            qDebug("HttpRequest: read additional line of header");
-        #endif
+// received another line - belongs to the previous header
+#ifdef SUPERVERBOSE
+        qDebug("HttpRequest: read additional line of header");
+#endif
         // Received additional line of previous header
-        if (headers.contains(currentHeader)) {
-            headers.insert(currentHeader,headers.value(currentHeader)+" "+newData);
+        if (headers.contains(currentHeader))
+        {
+            headers.insert(currentHeader, headers.value(currentHeader) + " " + newData);
         }
     }
     else
     {
-        // received an empty line - end of headers reached
-        #ifdef SUPERVERBOSE
-            qDebug("HttpRequest: headers completed");
-        #endif
+// received an empty line - end of headers reached
+#ifdef SUPERVERBOSE
+        qDebug("HttpRequest: headers completed");
+#endif
         // Empty line received, that means all headers have been received
         // Check for multipart/form-data
-        QByteArray contentType=headers.value("content-type");
+        QByteArray contentType = headers.value("content-type");
         if (contentType.startsWith("multipart/form-data"))
         {
-            int posi=contentType.indexOf("boundary=");
-            if (posi>=0) {
-                boundary=contentType.mid(posi+9);
-                if  (boundary.startsWith('"') && boundary.endsWith('"'))
+            int posi = contentType.indexOf("boundary=");
+            if (posi >= 0)
+            {
+                boundary = contentType.mid(posi + 9);
+                if (boundary.startsWith('"') && boundary.endsWith('"'))
                 {
-                   boundary = boundary.mid(1,boundary.length()-2);
+                    boundary = boundary.mid(1, boundary.length() - 2);
                 }
             }
         }
-        QByteArray contentLength=headers.value("content-length");
+        QByteArray contentLength = headers.value("content-length");
         if (!contentLength.isEmpty())
         {
-            expectedBodySize=contentLength.toInt();
+            expectedBodySize = contentLength.toInt();
         }
-        if (expectedBodySize==0)
+        if (expectedBodySize == 0)
         {
-            #ifdef SUPERVERBOSE
-                qDebug("HttpRequest: expect no body");
-            #endif
-            status=complete;
+#ifdef SUPERVERBOSE
+            qDebug("HttpRequest: expect no body");
+#endif
+            status = complete;
         }
-        else if (boundary.isEmpty() && expectedBodySize+currentSize>maxSize)
+        else if (boundary.isEmpty() && expectedBodySize + currentSize > maxSize)
         {
             qWarning("HttpRequest: expected body is too large");
-            status=abort;
+            status = abort;
         }
-        else if (!boundary.isEmpty() && expectedBodySize>maxMultiPartSize)
+        else if (!boundary.isEmpty() && expectedBodySize > maxMultiPartSize)
         {
             qWarning("HttpRequest: expected multipart body is too large");
-            status=abort;
+            status = abort;
         }
-        else {
-            #ifdef SUPERVERBOSE
-                qDebug("HttpRequest: expect %i bytes body",expectedBodySize);
-            #endif
-            status=waitForBody;
+        else
+        {
+#ifdef SUPERVERBOSE
+            qDebug("HttpRequest: expect %i bytes body", expectedBodySize);
+#endif
+            status = waitForBody;
         }
     }
 }
 
-void HttpRequest::readBody(QTcpSocket* socket)
+void HttpRequest::readBody(QTcpSocket *socket)
 {
-    Q_ASSERT(expectedBodySize!=0);
+    Q_ASSERT(expectedBodySize != 0);
     if (boundary.isEmpty())
     {
-        // normal body, no multipart
-        #ifdef SUPERVERBOSE
-            qDebug("HttpRequest: receive body");
-        #endif
-        int toRead=expectedBodySize-bodyData.size();
-        QByteArray newData=socket->read(toRead);
-        currentSize+=newData.size();
+// normal body, no multipart
+#ifdef SUPERVERBOSE
+        qDebug("HttpRequest: receive body");
+#endif
+        int toRead = expectedBodySize - bodyData.size();
+        QByteArray newData = socket->read(toRead);
+        currentSize += newData.size();
         bodyData.append(newData);
-        if (bodyData.size()>=expectedBodySize)
+        if (bodyData.size() >= expectedBodySize)
         {
-            status=complete;
+            status = complete;
         }
     }
     else
     {
-        // multipart body, store into temp file
-        #ifdef SUPERVERBOSE
-            qDebug("HttpRequest: receiving multipart body");
-        #endif
+// multipart body, store into temp file
+#ifdef SUPERVERBOSE
+        qDebug("HttpRequest: receiving multipart body");
+#endif
         // Create an object for the temporary file, if not already present
         if (tempFile == nullptr)
         {
@@ -181,23 +183,23 @@ void HttpRequest::readBody(QTcpSocket* socket)
             tempFile->open();
         }
         // Transfer data in 64kb blocks
-        qint64 fileSize=tempFile->size();
-        qint64 toRead=expectedBodySize-fileSize;
-        if (toRead>65536)
+        qint64 fileSize = tempFile->size();
+        qint64 toRead = expectedBodySize - fileSize;
+        if (toRead > 65536)
         {
-            toRead=65536;
+            toRead = 65536;
         }
-        fileSize+=tempFile->write(socket->read(toRead));
-        if (fileSize>=maxMultiPartSize)
+        fileSize += tempFile->write(socket->read(toRead));
+        if (fileSize >= maxMultiPartSize)
         {
             qWarning("HttpRequest: received too many multipart bytes");
-            status=abort;
+            status = abort;
         }
-        else if (fileSize>=expectedBodySize)
+        else if (fileSize >= expectedBodySize)
         {
-        #ifdef SUPERVERBOSE
+#ifdef SUPERVERBOSE
             qDebug("HttpRequest: received whole multipart body");
-        #endif
+#endif
             tempFile->flush();
             if (tempFile->error())
             {
@@ -205,26 +207,26 @@ void HttpRequest::readBody(QTcpSocket* socket)
             }
             parseMultiPartFile();
             tempFile->close();
-            status=complete;
+            status = complete;
         }
     }
 }
 
 void HttpRequest::decodeRequestParams()
 {
-    #ifdef SUPERVERBOSE
-        qDebug("HttpRequest: extract and decode request parameters");
-    #endif
+#ifdef SUPERVERBOSE
+    qDebug("HttpRequest: extract and decode request parameters");
+#endif
     // Get URL parameters
     QByteArray rawParameters;
-    int questionMark=path.indexOf('?');
-    if (questionMark>=0)
+    int questionMark = path.indexOf('?');
+    if (questionMark >= 0)
     {
-        rawParameters=path.mid(questionMark+1);
-        path=path.left(questionMark);
+        rawParameters = path.mid(questionMark + 1);
+        path = path.left(questionMark);
     }
     // Get request body parameters
-    QByteArray contentType=headers.value("content-type");
+    QByteArray contentType = headers.value("content-type");
     if (!bodyData.isEmpty() && (contentType.isEmpty() || contentType.startsWith("application/x-www-form-urlencoded")))
     {
         if (!rawParameters.isEmpty())
@@ -234,81 +236,81 @@ void HttpRequest::decodeRequestParams()
         }
         else
         {
-            rawParameters=bodyData;
+            rawParameters = bodyData;
         }
     }
     // Split the parameters into pairs of value and name
-    QList<QByteArray> list=rawParameters.split('&');
+    QList<QByteArray> list = rawParameters.split('&');
     foreach (QByteArray part, list)
     {
-        int equalsChar=part.indexOf('=');
-        if (equalsChar>=0)
+        int equalsChar = part.indexOf('=');
+        if (equalsChar >= 0)
         {
-            QByteArray name=part.left(equalsChar).trimmed();
-            QByteArray value=part.mid(equalsChar+1).trimmed();
-            parameters.insert(urlDecode(name),urlDecode(value));
+            QByteArray name = part.left(equalsChar).trimmed();
+            QByteArray value = part.mid(equalsChar + 1).trimmed();
+            parameters.insert(urlDecode(name), urlDecode(value));
         }
         else if (!part.isEmpty())
         {
             // Name without value
-            parameters.insert(urlDecode(part),"");
+            parameters.insert(urlDecode(part), "");
         }
     }
 }
 
 void HttpRequest::extractCookies()
 {
-    #ifdef SUPERVERBOSE
-        qDebug("HttpRequest: extract cookies");
-    #endif
-    foreach(QByteArray cookieStr, headers.values("cookie"))
+#ifdef SUPERVERBOSE
+    qDebug("HttpRequest: extract cookies");
+#endif
+    foreach (QByteArray cookieStr, headers.values("cookie"))
     {
-        QList<QByteArray> list=HttpCookie::splitCSV(cookieStr);
-        foreach(QByteArray part, list)
+        QList<QByteArray> list = HttpCookie::splitCSV(cookieStr);
+        foreach (QByteArray part, list)
         {
-            #ifdef SUPERVERBOSE
-                qDebug("HttpRequest: found cookie %s",part.data());
-            #endif                // Split the part into name and value
+#ifdef SUPERVERBOSE
+            qDebug("HttpRequest: found cookie %s", part.data());
+#endif // Split the part into name and value
             QByteArray name;
             QByteArray value;
-            int posi=part.indexOf('=');
+            int posi = part.indexOf('=');
             if (posi)
             {
-                name=part.left(posi).trimmed();
-                value=part.mid(posi+1).trimmed();
+                name = part.left(posi).trimmed();
+                value = part.mid(posi + 1).trimmed();
             }
             else
             {
-                name=part.trimmed();
-                value="";
+                name = part.trimmed();
+                value = "";
             }
-            cookies.insert(name,value);
+            cookies.insert(name, value);
         }
     }
     headers.remove("cookie");
 }
 
-void HttpRequest::readFromSocket(QTcpSocket* socket)
+void HttpRequest::readFromSocket(QTcpSocket *socket)
 {
-    Q_ASSERT(status!=complete);
-    if (status==waitForRequest)
+    Q_ASSERT(status != complete);
+    if (status == waitForRequest)
     {
         readRequest(socket);
     }
-    else if (status==waitForHeader)
+    else if (status == waitForHeader)
     {
         readHeader(socket);
     }
-    else if (status==waitForBody)
+    else if (status == waitForBody)
     {
         readBody(socket);
     }
-    if ((boundary.isEmpty() && currentSize>maxSize) || (!boundary.isEmpty() && currentSize>maxMultiPartSize))
+    if ((boundary.isEmpty() && currentSize > maxSize) || (!boundary.isEmpty() && currentSize > maxMultiPartSize))
     {
         qWarning("HttpRequest: received too many bytes");
-        status=abort;
+        status = abort;
     }
-    if (status==complete)
+    if (status == complete)
     {
         // Extract and decode request parameters from url and body
         decodeRequestParams();
@@ -317,63 +319,57 @@ void HttpRequest::readFromSocket(QTcpSocket* socket)
     }
 }
 
-
 HttpRequest::RequestStatus HttpRequest::getStatus() const
 {
     return status;
 }
-
 
 QByteArray HttpRequest::getMethod() const
 {
     return method;
 }
 
-
 QByteArray HttpRequest::getPath() const
 {
     return urlDecode(path);
 }
 
-
-const QByteArray& HttpRequest::getRawPath() const
+const QByteArray &HttpRequest::getRawPath() const
 {
     return path;
 }
-
 
 QByteArray HttpRequest::getVersion() const
 {
     return version;
 }
 
-
-QByteArray HttpRequest::getHeader(const QByteArray& name) const
+QByteArray HttpRequest::getHeader(const QByteArray &name) const
 {
     return headers.value(name.toLower());
 }
 
-QList<QByteArray> HttpRequest::getHeaders(const QByteArray& name) const
+QList<QByteArray> HttpRequest::getHeaders(const QByteArray &name) const
 {
     return headers.values(name.toLower());
 }
 
-QMultiMap<QByteArray,QByteArray> HttpRequest::getHeaderMap() const
+QMultiMap<QByteArray, QByteArray> HttpRequest::getHeaderMap() const
 {
     return headers;
 }
 
-QByteArray HttpRequest::getParameter(const QByteArray& name) const
+QByteArray HttpRequest::getParameter(const QByteArray &name) const
 {
     return parameters.value(name);
 }
 
-QList<QByteArray> HttpRequest::getParameters(const QByteArray& name) const
+QList<QByteArray> HttpRequest::getParameters(const QByteArray &name) const
 {
     return parameters.values(name);
 }
 
-QMultiMap<QByteArray,QByteArray> HttpRequest::getParameterMap() const
+QMultiMap<QByteArray, QByteArray> HttpRequest::getParameterMap() const
 {
     return parameters;
 }
@@ -383,64 +379,80 @@ QByteArray HttpRequest::getBody() const
     return bodyData;
 }
 
+int HttpRequest::getReceiveBodySize() const
+{
+    if (boundary.isEmpty())
+    {
+        return bodyData.size();
+    }
+    else
+    {
+        if (tempFile != nullptr)
+        {
+            return tempFile->size();
+        }
+    }
+
+    return 0;
+}
+
 QByteArray HttpRequest::urlDecode(const QByteArray source)
 {
     QByteArray buffer(source);
-    buffer.replace('+',' ');
-    int percentChar=buffer.indexOf('%');
-    while (percentChar>=0)
+    buffer.replace('+', ' ');
+    int percentChar = buffer.indexOf('%');
+    while (percentChar >= 0)
     {
         bool ok;
-        int hexCode=buffer.mid(percentChar+1,2).toInt(&ok,16);
+        int hexCode = buffer.mid(percentChar + 1, 2).toInt(&ok, 16);
         if (ok)
         {
-            char c=char(hexCode);
-            buffer.replace(percentChar,3,&c,1);
+            char c = char(hexCode);
+            buffer.replace(percentChar, 3, &c, 1);
         }
-        percentChar=buffer.indexOf('%',percentChar+1);
+        percentChar = buffer.indexOf('%', percentChar + 1);
     }
     return buffer;
 }
-
 
 void HttpRequest::parseMultiPartFile()
 {
     qDebug("HttpRequest: parsing multipart temp file");
     tempFile->seek(0);
-    bool finished=false;
+    bool finished = false;
     while (!tempFile->atEnd() && !finished && !tempFile->error())
     {
-        #ifdef SUPERVERBOSE
-            qDebug("HttpRequest: reading multpart headers");
-        #endif
+#ifdef SUPERVERBOSE
+        qDebug("HttpRequest: reading multpart headers");
+#endif
         QByteArray fieldName;
         QByteArray fileName;
         while (!tempFile->atEnd() && !finished && !tempFile->error())
         {
-            QByteArray line=tempFile->readLine(65536).trimmed();
+            QByteArray line = tempFile->readLine(65536).trimmed();
             if (line.startsWith("Content-Disposition:"))
             {
                 if (line.contains("form-data"))
                 {
-                    int start=line.indexOf(" name=\"");
-                    int end=line.indexOf("\"",start+7);
-                    if (start>=0 && end>=start)
+                    int start = line.indexOf(" name=\"");
+                    int end = line.indexOf("\"", start + 7);
+                    if (start >= 0 && end >= start)
                     {
-                        fieldName=line.mid(start+7,end-start-7);
+                        fieldName = line.mid(start + 7, end - start - 7);
                     }
-                    start=line.indexOf(" filename=\"");
-                    end=line.indexOf("\"",start+11);
-                    if (start>=0 && end>=start)
+                    start = line.indexOf(" filename=\"");
+                    end = line.indexOf("\"", start + 11);
+                    if (start >= 0 && end >= start)
                     {
-                        fileName=line.mid(start+11,end-start-11);
+                        fileName = line.mid(start + 11, end - start - 11);
                     }
-                    #ifdef SUPERVERBOSE
-                        qDebug("HttpRequest: multipart field=%s, filename=%s",fieldName.data(),fileName.data());
-                    #endif
+#ifdef SUPERVERBOSE
+                    qDebug("HttpRequest: multipart field=%s, filename=%s", fieldName.data(), fileName.data());
+#endif
                 }
                 else
                 {
-                    qDebug("HttpRequest: ignoring unsupported content part %s",line.data());
+                    qDebug("HttpRequest: ignoring unsupported content part %s", line.data());
                 }
             }
             else if (line.isEmpty())
@@ -449,49 +461,49 @@ void HttpRequest::parseMultiPartFile()
             }
         }
 
-        #ifdef SUPERVERBOSE
-            qDebug("HttpRequest: reading multpart data");
-        #endif
-        QTemporaryFile* uploadedFile=nullptr;
+#ifdef SUPERVERBOSE
+        qDebug("HttpRequest: reading multpart data");
+#endif
+        QTemporaryFile *uploadedFile = nullptr;
         QByteArray fieldValue;
         while (!tempFile->atEnd() && !finished && !tempFile->error())
         {
-            QByteArray line=tempFile->readLine(65536);
-            if (line.startsWith("--"+boundary))
+            QByteArray line = tempFile->readLine(65536);
+            if (line.startsWith("--" + boundary))
             {
                 // Boundary found. Until now we have collected 2 bytes too much,
                 // so remove them from the last result
                 if (fileName.isEmpty() && !fieldName.isEmpty())
                 {
                     // last field was a form field
-                    fieldValue.remove(fieldValue.size()-2,2);
-                    parameters.insert(fieldName,fieldValue);
-                    qDebug("HttpRequest: set parameter %s=%s",fieldName.data(),fieldValue.data());
+                    fieldValue.remove(fieldValue.size() - 2, 2);
+                    parameters.insert(fieldName, fieldValue);
+                    qDebug("HttpRequest: set parameter %s=%s", fieldName.data(), fieldValue.data());
                 }
                 else if (!fileName.isEmpty() && !fieldName.isEmpty())
                 {
                     // last field was a file
                     if (uploadedFile)
                     {
-                        #ifdef SUPERVERBOSE
-                            qDebug("HttpRequest: finishing writing to uploaded file");
-                        #endif
-                        uploadedFile->resize(uploadedFile->size()-2);
+#ifdef SUPERVERBOSE
+                        qDebug("HttpRequest: finishing writing to uploaded file");
+#endif
+                        uploadedFile->resize(uploadedFile->size() - 2);
                         uploadedFile->flush();
                         uploadedFile->seek(0);
-                        parameters.insert(fieldName,fileName);
-                        qDebug("HttpRequest: set parameter %s=%s",fieldName.data(),fileName.data());
-                        uploadedFiles.insert(fieldName,uploadedFile);
-                        qDebug("HttpRequest: uploaded file size is %lli",uploadedFile->size());
+                        parameters.insert(fieldName, fileName);
+                        qDebug("HttpRequest: set parameter %s=%s", fieldName.data(), fileName.data());
+                        uploadedFiles.insert(fieldName, uploadedFile);
+                        qDebug("HttpRequest: uploaded file size is %lli", uploadedFile->size());
                     }
                     else
                     {
                         qWarning("HttpRequest: format error, unexpected end of file data");
                     }
                 }
-                if (line.contains(boundary+"--"))
+                if (line.contains(boundary + "--"))
                 {
-                    finished=true;
+                    finished = true;
                 }
                 break;
             }
@@ -500,7 +512,7 @@ void HttpRequest::parseMultiPartFile()
                 if (fileName.isEmpty() && !fieldName.isEmpty())
                 {
                     // this is a form field.
-                    currentSize+=line.size();
+                    currentSize += line.size();
                     fieldValue.append(line);
                 }
                 else if (!fileName.isEmpty() && !fieldName.isEmpty())
@@ -508,13 +520,13 @@ void HttpRequest::parseMultiPartFile()
                     // this is a file
                     if (!uploadedFile)
                     {
-                        uploadedFile=new QTemporaryFile();
+                        uploadedFile = new QTemporaryFile();
                         uploadedFile->open();
                     }
                     uploadedFile->write(line);
                     if (uploadedFile->error())
                     {
-                        qCritical("HttpRequest: error writing temp file, %s",qPrintable(uploadedFile->errorString()));
+                        qCritical("HttpRequest: error writing temp file, %s", qPrintable(uploadedFile->errorString()));
                     }
                 }
             }
@@ -522,18 +534,18 @@ void HttpRequest::parseMultiPartFile()
     }
     if (tempFile->error())
     {
-        qCritical("HttpRequest: cannot read temp file, %s",qPrintable(tempFile->errorString()));
+        qCritical("HttpRequest: cannot read temp file, %s", qPrintable(tempFile->errorString()));
     }
-    #ifdef SUPERVERBOSE
-        qDebug("HttpRequest: finished parsing multipart temp file");
-    #endif
+#ifdef SUPERVERBOSE
+    qDebug("HttpRequest: finished parsing multipart temp file");
+#endif
 }
 
 HttpRequest::~HttpRequest()
 {
-    foreach(QByteArray key, uploadedFiles.keys())
+    foreach (QByteArray key, uploadedFiles.keys())
     {
-        QTemporaryFile* file=uploadedFiles.value(key);
+        QTemporaryFile *file = uploadedFiles.value(key);
         if (file->isOpen())
         {
             file->close();
@@ -550,18 +562,18 @@ HttpRequest::~HttpRequest()
     }
 }
 
-QTemporaryFile* HttpRequest::getUploadedFile(const QByteArray fieldName) const
+QTemporaryFile *HttpRequest::getUploadedFile(const QByteArray fieldName) const
 {
     return uploadedFiles.value(fieldName);
 }
 
-QByteArray HttpRequest::getCookie(const QByteArray& name) const
+QByteArray HttpRequest::getCookie(const QByteArray &name) const
 {
     return cookies.value(name);
 }
 
 /** Get the map of cookies */
-QMap<QByteArray,QByteArray>& HttpRequest::getCookieMap()
+QMap<QByteArray, QByteArray> &HttpRequest::getCookieMap()
 {
     return cookies;
 }
@@ -575,4 +587,3 @@ QHostAddress HttpRequest::getPeerAddress() const
 {
     return peerAddress;
 }
-

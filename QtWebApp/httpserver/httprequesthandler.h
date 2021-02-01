@@ -24,16 +24,16 @@ namespace stefanfrings {
    @see StaticFileController which delivers static local files.
 */
 
-class DECLSPEC HttpRequestHandler : public QObject {
+class DECLSPEC HttpRequestHandler : public QObject
+{
     Q_OBJECT
     Q_DISABLE_COPY(HttpRequestHandler)
 public:
-
     /**
      * Constructor.
      * @param parent Parent object.
      */
-    HttpRequestHandler(QObject* parent=nullptr);
+    HttpRequestHandler(QObject *parent = nullptr);
 
     /** Destructor */
     virtual ~HttpRequestHandler();
@@ -44,10 +44,12 @@ public:
       @param response Must be used to return the response
       @warning This method must be thread safe
     */
-    virtual void service(HttpRequest& request, HttpResponse& response);
+    virtual void service(HttpRequest &request, HttpResponse &response);
 
+public slots:
+    virtual void httpRequestStateChanged(HttpRequest *request, QVariant extra = QVariant());
 };
 
-} // end of namespace
+} // namespace stefanfrings
 
 #endif // HTTPREQUESTHANDLER_H
