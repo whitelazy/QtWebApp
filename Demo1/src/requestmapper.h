@@ -36,11 +36,21 @@ public:
       @param request The received HTTP request
       @param response Must be used to return the response
     */
-    void service(HttpRequest &request, HttpResponse &response);
+    void service(HttpRequest &request, HttpResponse &response) override;
 
     // HttpRequestHandler interface
-public slots:
-    void httpRequestStateChanged(HttpRequest *request, QVariant extra) override;
+public:
+    bool authorize(HttpRequest &request, HttpResponse &response) override;
+    void newHttpConnectionIncomming(HttpRequest *request) override;
+    void newHttpRequestIncomming(HttpRequest *request) override;
+    void httpRequestHeaderRecieved(HttpRequest *request) override;
+    void httpRequestAccessDenied(HttpRequest *request) override;
+    void httpRequestBodyReceived(HttpRequest *request) override;
+    void httpRequestAborted(HttpRequest *request) override;
+    void httpRequestTimeout(HttpRequest *request) override;
+    void httpRequestCompleted(HttpRequest *request) override;
+    void httpRequestFinished(HttpRequest *request) override;
+    void httpRequestExpired(HttpRequest *request) override;
 };
 
 #endif // REQUESTMAPPER_H

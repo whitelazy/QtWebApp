@@ -73,7 +73,228 @@ void RequestMapper::service(HttpRequest &request, HttpResponse &response)
     }
 }
 
-void RequestMapper::httpRequestStateChanged(HttpRequest *request, QVariant extra)
+bool RequestMapper::authorize(HttpRequest &request, HttpResponse &response)
 {
-    qDebug() << request << request->getPeerAddress() << request->getStatus() << request->getPath() << extra;
+    auto receivedSize = request.getReceiveBodySize();
+    auto expectedSize = request.getHeader("content-length").toInt();
+    qDebug() << __FUNCTION__
+             << QString("Request [%1] - IP: %2, STATUS :%3, PATH: %4, RECV: %5, ContentLength: %6")
+                    .arg(reinterpret_cast<uint64_t>(&request))
+                    .arg(request.getPeerAddress().toString())
+                    .arg(static_cast<int32_t>(request.getStatus()))
+                    .arg(QString(request.getPath()))
+                    .arg(receivedSize)
+                    .arg(expectedSize);
+
+    return true;
+}
+
+void RequestMapper::newHttpConnectionIncomming(HttpRequest *request)
+{
+    if (request)
+    {
+        auto receivedSize = request->getReceiveBodySize();
+        auto expectedSize = request->getHeader("content-length").toInt();
+        qDebug() << __FUNCTION__
+                 << QString("Request [%1] - IP: %2, STATUS :%3, PATH: %4, RECV: %5, ContentLength: %6")
+                        .arg(reinterpret_cast<uint64_t>(&request))
+                        .arg(request->getPeerAddress().toString())
+                        .arg(static_cast<int32_t>(request->getStatus()))
+                        .arg(QString(request->getPath()))
+                        .arg(receivedSize)
+                        .arg(expectedSize);
+    }
+    else
+    {
+        qDebug() << __FUNCTION__;
+    }
+}
+
+void RequestMapper::newHttpRequestIncomming(HttpRequest *request)
+{
+    if (request)
+    {
+        auto receivedSize = request->getReceiveBodySize();
+        auto expectedSize = request->getHeader("content-length").toInt();
+        qDebug() << __FUNCTION__
+                 << QString("Request [%1] - IP: %2, STATUS :%3, PATH: %4, RECV: %5, ContentLength: %6")
+                        .arg(reinterpret_cast<uint64_t>(&request))
+                        .arg(request->getPeerAddress().toString())
+                        .arg(static_cast<int32_t>(request->getStatus()))
+                        .arg(QString(request->getPath()))
+                        .arg(receivedSize)
+                        .arg(expectedSize);
+    }
+    else
+    {
+        qDebug() << __FUNCTION__;
+    }
+}
+
+void RequestMapper::httpRequestHeaderRecieved(HttpRequest *request)
+{
+    if (request)
+    {
+        auto receivedSize = request->getReceiveBodySize();
+        auto expectedSize = request->getHeader("content-length").toInt();
+        qDebug() << __FUNCTION__
+                 << QString("Request [%1] - IP: %2, STATUS :%3, PATH: %4, RECV: %5, ContentLength: %6")
+                        .arg(reinterpret_cast<uint64_t>(&request))
+                        .arg(request->getPeerAddress().toString())
+                        .arg(static_cast<int32_t>(request->getStatus()))
+                        .arg(QString(request->getPath()))
+                        .arg(receivedSize)
+                        .arg(expectedSize);
+    }
+    else
+    {
+        qDebug() << __FUNCTION__;
+    }
+}
+
+void RequestMapper::httpRequestAccessDenied(HttpRequest *request)
+{
+    if (request)
+    {
+        auto receivedSize = request->getReceiveBodySize();
+        auto expectedSize = request->getHeader("content-length").toInt();
+        qDebug() << __FUNCTION__
+                 << QString("Request [%1] - IP: %2, STATUS :%3, PATH: %4, RECV: %5, ContentLength: %6")
+                        .arg(reinterpret_cast<uint64_t>(&request))
+                        .arg(request->getPeerAddress().toString())
+                        .arg(static_cast<int32_t>(request->getStatus()))
+                        .arg(QString(request->getPath()))
+                        .arg(receivedSize)
+                        .arg(expectedSize);
+    }
+    else
+    {
+        qDebug() << __FUNCTION__;
+    }
+}
+
+void RequestMapper::httpRequestBodyReceived(HttpRequest *request)
+{
+    if (request)
+    {
+        auto receivedSize = request->getReceiveBodySize();
+        auto expectedSize = request->getHeader("content-length").toInt();
+        qDebug() << __FUNCTION__
+                 << QString("Request [%1] - IP: %2, STATUS :%3, PATH: %4, RECV: %5, ContentLength: %6")
+                        .arg(reinterpret_cast<uint64_t>(&request))
+                        .arg(request->getPeerAddress().toString())
+                        .arg(static_cast<int32_t>(request->getStatus()))
+                        .arg(QString(request->getPath()))
+                        .arg(receivedSize)
+                        .arg(expectedSize);
+    }
+    else
+    {
+        qDebug() << __FUNCTION__;
+    }
+}
+
+void RequestMapper::httpRequestAborted(HttpRequest *request)
+{
+    if (request)
+    {
+        auto receivedSize = request->getReceiveBodySize();
+        auto expectedSize = request->getHeader("content-length").toInt();
+        qDebug() << __FUNCTION__
+                 << QString("Request [%1] - IP: %2, STATUS :%3, PATH: %4, RECV: %5, ContentLength: %6")
+                        .arg(reinterpret_cast<uint64_t>(&request))
+                        .arg(request->getPeerAddress().toString())
+                        .arg(static_cast<int32_t>(request->getStatus()))
+                        .arg(QString(request->getPath()))
+                        .arg(receivedSize)
+                        .arg(expectedSize);
+    }
+    else
+    {
+        qDebug() << __FUNCTION__;
+    }
+}
+
+void RequestMapper::httpRequestTimeout(HttpRequest *request)
+{
+    if (request)
+    {
+        auto receivedSize = request->getReceiveBodySize();
+        auto expectedSize = request->getHeader("content-length").toInt();
+        qDebug() << __FUNCTION__
+                 << QString("Request [%1] - IP: %2, STATUS :%3, PATH: %4, RECV: %5, ContentLength: %6")
+                        .arg(reinterpret_cast<uint64_t>(&request))
+                        .arg(request->getPeerAddress().toString())
+                        .arg(static_cast<int32_t>(request->getStatus()))
+                        .arg(QString(request->getPath()))
+                        .arg(receivedSize)
+                        .arg(expectedSize);
+    }
+    else
+    {
+        qDebug() << __FUNCTION__;
+    }
+}
+
+void RequestMapper::httpRequestCompleted(HttpRequest *request)
+{
+    if (request)
+    {
+        auto receivedSize = request->getReceiveBodySize();
+        auto expectedSize = request->getHeader("content-length").toInt();
+        qDebug() << __FUNCTION__
+                 << QString("Request [%1] - IP: %2, STATUS :%3, PATH: %4, RECV: %5, ContentLength: %6")
+                        .arg(reinterpret_cast<uint64_t>(&request))
+                        .arg(request->getPeerAddress().toString())
+                        .arg(static_cast<int32_t>(request->getStatus()))
+                        .arg(QString(request->getPath()))
+                        .arg(receivedSize)
+                        .arg(expectedSize);
+    }
+    else
+    {
+        qDebug() << __FUNCTION__;
+    }
+}
+
+void RequestMapper::httpRequestFinished(HttpRequest *request)
+{
+    if (request)
+    {
+        auto receivedSize = request->getReceiveBodySize();
+        auto expectedSize = request->getHeader("content-length").toInt();
+        qDebug() << __FUNCTION__
+                 << QString("Request [%1] - IP: %2, STATUS :%3, PATH: %4, RECV: %5, ContentLength: %6")
+                        .arg(reinterpret_cast<uint64_t>(&request))
+                        .arg(request->getPeerAddress().toString())
+                        .arg(static_cast<int32_t>(request->getStatus()))
+                        .arg(QString(request->getPath()))
+                        .arg(receivedSize)
+                        .arg(expectedSize);
+    }
+    else
+    {
+        qDebug() << __FUNCTION__;
+    }
+}
+
+void RequestMapper::httpRequestExpired(HttpRequest *request)
+{
+    if (request)
+    {
+        auto receivedSize = request->getReceiveBodySize();
+        auto expectedSize = request->getHeader("content-length").toInt();
+        qDebug() << __FUNCTION__
+                 << QString("Request [%1] - IP: %2, STATUS :%3, PATH: %4, RECV: %5, ContentLength: %6")
+                        .arg(reinterpret_cast<uint64_t>(&request))
+                        .arg(request->getPeerAddress().toString())
+                        .arg(static_cast<int32_t>(request->getStatus()))
+                        .arg(QString(request->getPath()))
+                        .arg(receivedSize)
+                        .arg(expectedSize);
+    }
+    else
+    {
+        qDebug() << __FUNCTION__;
+    }
 }

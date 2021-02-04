@@ -97,9 +97,6 @@ private:
     /**  Create SSL or TCP socket */
     void createSocket();
 
-signals:
-    void httpRequestStatusChanged(HttpRequest *request, QVariant extra = QVariant());
-
 public slots:
 
     /**

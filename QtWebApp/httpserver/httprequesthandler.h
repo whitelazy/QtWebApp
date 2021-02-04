@@ -46,8 +46,18 @@ public:
     */
     virtual void service(HttpRequest &request, HttpResponse &response);
 
-public slots:
-    virtual void httpRequestStateChanged(HttpRequest *request, QVariant extra = QVariant());
+    virtual bool authorize(HttpRequest &request, HttpResponse &response);
+
+    Q_INVOKABLE virtual void newHttpConnectionIncomming(HttpRequest *request);
+    Q_INVOKABLE virtual void newHttpRequestIncomming(HttpRequest *request);
+    Q_INVOKABLE virtual void httpRequestHeaderRecieved(HttpRequest *request);
+    Q_INVOKABLE virtual void httpRequestAccessDenied(HttpRequest *request);
+    Q_INVOKABLE virtual void httpRequestBodyReceived(HttpRequest *request);
+    Q_INVOKABLE virtual void httpRequestAborted(HttpRequest *request);
+    Q_INVOKABLE virtual void httpRequestTimeout(HttpRequest *request);
+    Q_INVOKABLE virtual void httpRequestCompleted(HttpRequest *request);
+    Q_INVOKABLE virtual void httpRequestFinished(HttpRequest *request);
+    Q_INVOKABLE virtual void httpRequestExpired(HttpRequest *request);
 };
 
 } // namespace stefanfrings

@@ -22,8 +22,37 @@ void HttpRequestHandler::service(HttpRequest &request, HttpResponse &response)
     response.write("501 not implemented", true);
 }
 
-void HttpRequestHandler::httpRequestStateChanged(HttpRequest *request, QVariant extra)
+bool HttpRequestHandler::authorize(HttpRequest &request, HttpResponse &response)
 {
-    Q_UNUSED(request);
-    Q_UNUSED(extra);
+    return true;
 }
+
+void HttpRequestHandler::newHttpConnectionIncomming(HttpRequest *request)
+{ }
+
+void HttpRequestHandler::newHttpRequestIncomming(HttpRequest *request)
+{ }
+
+void HttpRequestHandler::httpRequestHeaderRecieved(HttpRequest *request)
+{ }
+
+void HttpRequestHandler::httpRequestAccessDenied(HttpRequest *request)
+{ }
+
+void HttpRequestHandler::httpRequestBodyReceived(HttpRequest *request)
+{ }
+
+void HttpRequestHandler::httpRequestAborted(HttpRequest *request)
+{ }
+
+void HttpRequestHandler::httpRequestTimeout(HttpRequest *request)
+{ }
+
+void HttpRequestHandler::httpRequestCompleted(HttpRequest *request)
+{ }
+
+void HttpRequestHandler::httpRequestFinished(HttpRequest *request)
+{ }
+
+void HttpRequestHandler::httpRequestExpired(HttpRequest *request)
+{ }

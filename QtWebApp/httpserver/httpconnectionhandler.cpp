@@ -19,8 +19,6 @@ HttpConnectionHandler::HttpConnectionHandler(const QSettings *settings, HttpRequ
     currentRequest = nullptr;
     busy = false;
 
-    connect(this, &HttpConnectionHandler::httpRequestStatusChanged, this->requestHandler, &HttpRequestHandler::httpRequestStateChanged);
-
     // execute signals in a new thread
     thread = new QThread();
     thread->start();
@@ -105,6 +103,9 @@ void HttpConnectionHandler::handleConnection(tSocketDescriptor socketDescriptor)
     int readTimeout = settings->value("readTimeout", 10000).toInt();
     readTimer.start(readTimeout);
     // delete previous request
+
+    requestHandler->httpRequestExpired(currentRequest);
+
     delete currentRequest;
     currentRequest = nullptr;
 }
@@ -129,6 +130,9 @@ void HttpConnectionHandler::readTimeout()
     while (socket->bytesToWrite())
         socket->waitForBytesWritten();
     socket->disconnectFromHost();
+
+    requestHandler->httpRequestTimeout(currentRequest);
+
     delete currentRequest;
     currentRequest = nullptr;
 }
@@ -155,9 +159,12 @@ void HttpConnectionHandler::read()
         if (!currentRequest)
         {
             currentRequest = new HttpRequest(settings);
-            emit httpRequestStatusChanged(currentRequest, QVariant(__LINE__));
             prevStatus = currentRequest->getStatus();
+
+            requestHandler->newHttpConnectionIncomming(currentRequest);
         }
+
+        HttpResponse response(socket);
 
         // Collect data for the request object
         while (socket->bytesAvailable() && currentRequest->getStatus() != HttpRequest::complete && currentRequest->getStatus() != HttpRequest::abort)
@@ -167,22 +174,31 @@ void HttpConnectionHandler::read()
             if (prevStatus != currentStatus)
             {
                 prevStatus = currentStatus;
-                emit httpRequestStatusChanged(
-                    currentRequest,
-                    QVariant {QVariantMap {{"prevStatus", prevStatus}, {"currentStatus", currentStatus}, {"line", QVariant(__LINE__)}}});
+                if (currentStatus == HttpRequest::waitForHeader)
+                {
+                    requestHandler->newHttpRequestIncomming(currentRequest);
+                }
+                else if (currentStatus == HttpRequest::waitForBody)
+                {
+                    requestHandler->httpRequestHeaderRecieved(currentRequest);
+                    if (!requestHandler->authorize(*currentRequest, response))
+                    {
+                        while (socket->bytesToWrite())
+                            socket->waitForBytesWritten();
+                        socket->disconnectFromHost();
+
+                        requestHandler->httpRequestAccessDenied(currentRequest);
+
+                        delete currentRequest;
+                        currentRequest = nullptr;
+                        return;
+                    }
+                }
             }
             if (currentRequest->getStatus() == HttpRequest::waitForBody)
             {
-                QByteArray contentType = currentRequest->getHeader("content-type");
-                if (contentType.startsWith("multipart/form-data"))
-                {
-                    int expectedLength = currentRequest->getHeader("content-length").toULong();
-                    int currentLength = currentRequest->getReceiveBodySize();
+                requestHandler->httpRequestBodyReceived(currentRequest);
 
-                    emit httpRequestStatusChanged(
-                        currentRequest,
-                        QVariant {QVariantMap {{"expectedSize", expectedLength}, {"currentSize", currentLength}, {"line", QVariant(__LINE__)}}});
-                }
                 // Restart timer for read timeout, otherwise it would
                 // expire during large file uploads.
                 int readTimeout = settings->value("readTimeout", 10000).toInt();
@@ -193,7 +209,7 @@ void HttpConnectionHandler::read()
         // If the request is aborted, return error message and close the connection
         if (currentRequest->getStatus() == HttpRequest::abort)
         {
-            emit httpRequestStatusChanged(currentRequest, QVariant(__LINE__));
+            requestHandler->httpRequestAborted(currentRequest);
 
             socket->write("HTTP/1.1 413 entity too large\r\nConnection: close\r\n\r\n413 Entity too large\r\n");
             while (socket->bytesToWrite())
@@ -210,10 +226,9 @@ void HttpConnectionHandler::read()
             readTimer.stop();
             qDebug("HttpConnectionHandler (%p): received request", static_cast<void *>(this));
 
-            emit httpRequestStatusChanged(currentRequest, QVariant(__LINE__));
+            requestHandler->httpRequestCompleted(currentRequest);
 
             // Copy the Connection:close header to the response
-            HttpResponse response(socket);
             bool closeConnection = QString::compare(currentRequest->getHeader("Connection"), "close", Qt::CaseInsensitive) == 0;
             if (closeConnection)
             {
@@ -287,6 +302,9 @@ void HttpConnectionHandler::read()
                 int readTimeout = settings->value("readTimeout", 10000).toInt();
                 readTimer.start(readTimeout);
             }
+
+            requestHandler->httpRequestFinished(currentRequest);
+
             delete currentRequest;
             currentRequest = nullptr;
         }
